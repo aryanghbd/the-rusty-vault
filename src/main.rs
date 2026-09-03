@@ -1,5 +1,6 @@
 use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -30,17 +31,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     // now we should listen and see whats up
-    while let Some(result) = read.next().await {
-        match result {
-            Ok(Message::Text(text)) => {
-                println!("msg received {}", text);
-            }
+    loop {
+        tokio::select! {
 
-            Ok(Message::Close(_)) => {
-                println!("Client closed");
+            // branch 1, did data arrive
+            Some(result) = read.next() => {
+                match result {
+                    Ok(Message::Text(text)) => {
+                        println!("msg received {}", text);
+                    }
+
+                    Ok(Message::Close(_)) => {
+                        println!("Client closed");
+                    },
+                    _ => {} //ignore
+                }
             },
-            _ => {} //ignore
+
+            end = signal::ctrl_c() => {
+                println!("Funky close");
+                break Ok(())
+            },
         }
-    }
-    Ok(())
+    }    
+
 }
