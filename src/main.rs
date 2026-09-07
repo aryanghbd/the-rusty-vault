@@ -33,6 +33,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data: Vec<TickerData>
     }
 
+    #[derive(Deserialize, Debug)]
+    struct TradeData {
+        symbol: String,
+        side: String,
+        price: rust_decimal::Decimal,
+        qty: rust_decimal::Decimal,
+        ord_type: String,
+        trade_id: u64,
+        timestamp: String
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct Trade {
+        channel: String,
+        r#type: String,
+        data: Vec<TradeData>
+    }
+
     println!("Hi");
     let url = "wss://ws.kraken.com/v2";
     
@@ -56,11 +74,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         r#"{{ "method": "subscribe", "params": {{ "channel": "ticker", "symbol": ["{}"] }} }}"#,
         symbol
     );
+    let trade = format!(
+        r#"{{ "method": "subscribe", "params": {{ "channel": "trade", "symbol": ["{}"], "snapshot": true }} }}"#,
+        symbol
+    );
 
     // split websocket stream into a sender and receiver for fun bidirectionality.
     let (mut write, mut read) = ws_stream.split();
 
-    write.send(Message::Text(ticker.into())).await?;
+    write.send(Message::Text(trade.into())).await?;
     println!("Subscription request sent!");
 
 
@@ -75,16 +97,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(Message::Text(text)) => {
                         println!("msg received {}", text);
 
-                        let msg: serde_json::Value = serde_json::from_str(&text).unwrap();
-                        
+                        let msg: serde_json::Value = serde_json::from_str(&text).unwrap();                 
                         // now index by channel
 
                         if let Some(channel) = msg.get("channel") {
                             if let Some(channel_name) = channel.as_str() {
-                                if channel_name == "ticker" {
-                                    //then parse into ticker
-                                    let ticker : Ticker = serde_json::from_str(&text).unwrap();
-                                    println!("Ticker received {:#?}", ticker);
+
+                                match channel_name {
+                                    "ticker" => {
+                                        let ticker : Ticker = serde_json::from_str(&text).unwrap();
+                                        println!("Ticker received {:#?}", ticker);
+                                    }
+                                    "trade" => {
+                                        let trade : Trade = serde_json::from_str(&text).unwrap();
+                                        println!("Trade received {:#?}", trade);
+                                    }
+                                    _ => {
+                                        println!("Not implemented yet");
+                                    } 
                                 }
                             }
                         }
