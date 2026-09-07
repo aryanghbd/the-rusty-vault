@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::io;
 use rust_decimal::Decimal;
 mod venues;
+mod events;
 use venues::kraken::KrakenAdapter;
 
 #[tokio::main]

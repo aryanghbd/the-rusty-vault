@@ -4,6 +4,8 @@ use tokio::signal;
 use serde::{Deserialize, Serialize};
 use std::io;
 use rust_decimal::Decimal;
+use chrono::{DateTime, Utc, Local, TimeZone, NaiveDateTime, Duration};
+use crate::events::{MarketEvent, Trade as NormalizedTrade};
 
 #[derive(Deserialize, Debug)]
 struct TickerData {
@@ -20,7 +22,7 @@ struct TickerData {
     change: rust_decimal::Decimal,
     change_pct: rust_decimal::Decimal,
     trades: u64,
-    timestamp: String, 
+    timestamp: DateTime<Utc>, 
 }
 
 #[derive(Deserialize, Debug)]
@@ -38,7 +40,7 @@ struct TradeData {
     qty: rust_decimal::Decimal,
     ord_type: String,
     trade_id: u64,
-    timestamp: String
+    timestamp: DateTime<Utc>
 }
 
 #[derive(Deserialize, Debug)]
@@ -60,7 +62,7 @@ struct BookData {
     bids: Vec<PriceLevel>,
     asks: Vec<PriceLevel>,
     checksum: u64,
-    timestamp: String
+    timestamp: DateTime<Utc>
 }
 
 #[derive(Deserialize, Debug)]
@@ -144,7 +146,7 @@ impl KrakenAdapter {
                     match result {
                         Ok(Message::Text(text)) => {
                             println!("msg received {}", text);
-
+                            let rec_timestamp = Utc::now();
                             let msg: serde_json::Value = serde_json::from_str(&text).unwrap();                 
                             // now index by channel
 
@@ -158,7 +160,25 @@ impl KrakenAdapter {
                                         }
                                         "trade" => {
                                             let trade : Trade = serde_json::from_str(&text).unwrap();
-                                            println!("Trade received {:#?}", trade);
+
+                                            // emit generalized 
+
+                                            for t in trade.data {
+                                                let event : NormalizedTrade = NormalizedTrade {
+                                                        venue: "kraken".to_owned(),
+                                                        instrument: t.symbol,
+                                                        trade_id: t.trade_id.to_string(),
+                                                        side: t.side,
+                                                        price: t.price,
+                                                        quantity: t.qty,
+                                                        exch_timestamp: t.timestamp,
+                                                        gateway_rec_timestamp: rec_timestamp
+                                                };
+                                                println!("Trade event {:#?}", event);
+
+                                                let marketevent : MarketEvent = MarketEvent::Trade(event);
+                                                println!("Market Event {:#?}", marketevent);
+                                            }
                                         }
                                         "book" => {
                                             let book: Book = serde_json::from_str(&text).unwrap();
