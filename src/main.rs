@@ -7,6 +7,7 @@ use rust_decimal::Decimal;
 mod venues;
 mod events;
 use venues::kraken::KrakenAdapter;
+use tokio::sync::mpsc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,9 +23,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let symbol = user_input.trim();
     
+    let (tx, mut rx) = mpsc::channel(100);
+
     let adapter = KrakenAdapter::new(symbol.to_owned());
-    adapter.run().await?;
+    tokio::spawn(async move {
+        if let Err(error) = adapter.run(tx).await {
+            println!("{}", error);
+        }
+    });
     
+    while let msg = rx.recv().unwrap() {
+        if let Some(event) = 
+    }
+
     Ok(())
 
 

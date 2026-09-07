@@ -6,6 +6,7 @@ use std::io;
 use rust_decimal::Decimal;
 use chrono::{DateTime, Utc, Local, TimeZone, NaiveDateTime, Duration};
 use crate::events::{MarketEvent, PriceLevel as NormalizedPriceLevel, BookUpdate as NormalizedBookUpdate, BookSnapshot as NormalizedBookSnapshot, Quote as NormalizedQuote, Trade as NormalizedTrade};
+use tokio::sync::mpsc;
 
 #[derive(Deserialize, Debug)]
 struct TickerData {
@@ -114,7 +115,7 @@ impl KrakenAdapter {
         return Self { symbol };
     }
 
-    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn run(&self, tx : mpsc::Sender<MarketEvent>) -> Result<(), Box<dyn std::error::Error>> {
         let (mut ws_stream, _response) = connect_async(Self::WS_URL).await?; // ? for resolving any errors after
         let ticker = format!(
             r#"{{ "method": "subscribe", "params": {{ "channel": "ticker", "symbol": ["{}"] }} }}"#,
@@ -171,6 +172,7 @@ impl KrakenAdapter {
                                                 };
                                                 let marketevent : MarketEvent = MarketEvent::Quote(event);
                                                 println!("Market event {:#?}", marketevent);
+                                                tx.send(marketevent).await?;
                                             }
                                         }
                                         "trade" => {
@@ -193,6 +195,7 @@ impl KrakenAdapter {
 
                                                 let marketevent : MarketEvent = MarketEvent::Trade(event);
                                                 println!("Market Event {:#?}", marketevent);
+                                                tx.send(marketevent).await?;
                                             }
                                         }
                                         "book" => {
@@ -212,6 +215,7 @@ impl KrakenAdapter {
 
                                                     let marketevent : MarketEvent = MarketEvent::BookSnapshot(event);
                                                     println!("Market event {:#?}", marketevent);
+                                                    tx.send(marketevent).await?;
                                                 }
                                             }
                                             else if book.r#type == "update" {
@@ -228,6 +232,8 @@ impl KrakenAdapter {
 
                                                     let marketevent : MarketEvent = MarketEvent::BookUpdate(event);
                                                     println!("Market event {:#?}", marketevent);
+                                                    tx.send(marketevent).await?;
+                                                    
                                                 }
                                             }
                                         }

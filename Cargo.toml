@@ -13,3 +13,4 @@ serde_json = "1.0"
 rustls = { version = "0.23.43", default-features = false, features = ["ring"] }
 rust_decimal = { version = "1.43.0", features = ["serde-arbitrary-precision"] }
 chrono = { version = "0.4.45", features = ["serde"] }
+mpsc = "0.3.0"
