@@ -51,6 +51,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data: Vec<TradeData>
     }
 
+    #[derive(Deserialize, Debug)]
+    struct PriceLevel {
+        price: Decimal,
+        qty: Decimal // amt of asset not necessarily amt of orders
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct BookData {
+        symbol: String,
+        bids: Vec<PriceLevel>,
+        asks: Vec<PriceLevel>,
+        checksum: u64,
+        timestamp: String
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct Book {
+        channel: String,
+        r#type: String,
+        data: Vec<BookData>
+    }
+
     println!("Hi");
     let url = "wss://ws.kraken.com/v2";
     
@@ -78,11 +100,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         r#"{{ "method": "subscribe", "params": {{ "channel": "trade", "symbol": ["{}"], "snapshot": true }} }}"#,
         symbol
     );
-
+    let book_l2 = format!(
+        r#"{{ "method": "subscribe", "params": {{ "channel": "book", "symbol": ["{}"] }} }}"#,
+        symbol
+    );
     // split websocket stream into a sender and receiver for fun bidirectionality.
     let (mut write, mut read) = ws_stream.split();
 
-    write.send(Message::Text(trade.into())).await?;
+    write.send(Message::Text(book_l2.into())).await?;
     println!("Subscription request sent!");
 
 
@@ -111,6 +136,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     "trade" => {
                                         let trade : Trade = serde_json::from_str(&text).unwrap();
                                         println!("Trade received {:#?}", trade);
+                                    }
+                                    "book" => {
+                                        let book: Book = serde_json::from_str(&text).unwrap();
+                                        println!("Book received {:#?}", book);
                                     }
                                     _ => {
                                         println!("Not implemented yet");
