@@ -202,20 +202,5 @@ impl KrakenAdapter {
     }
 }
 
-// let ticker = format!(
-//     r#"{{ "method": "subscribe", "params": {{ "channel": "ticker", "symbol": ["{}"] }} }}"#,
-//     symbol
-// );
-// let trade = format!(
-//     r#"{{ "method": "subscribe", "params": {{ "channel": "trade", "symbol": ["{}"], "snapshot": true }} }}"#,
-//     symbol
-// );
-// let book_l2 = format!(
-//     r#"{{ "method": "subscribe", "params": {{ "channel": "book", "symbol": ["{}"] }} }}"#,
-//     symbol
-// );
-// let instrument = format!(
-//     r#"{{ "method": "subscribe", "params": {{ "channel": "instrument"}} }}"#,
-// );
 
 
