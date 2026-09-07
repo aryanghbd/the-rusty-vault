@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::io;
 use rust_decimal::Decimal;
 use chrono::{DateTime, Utc, Local, TimeZone, NaiveDateTime, Duration};
-use crate::events::{MarketEvent, Trade as NormalizedTrade};
+use crate::events::{MarketEvent, PriceLevel as NormalizedPriceLevel, BookUpdate as NormalizedBookUpdate, BookSnapshot as NormalizedBookSnapshot, Quote as NormalizedQuote, Trade as NormalizedTrade};
 
 #[derive(Deserialize, Debug)]
 struct TickerData {
@@ -156,7 +156,22 @@ impl KrakenAdapter {
                                     match channel_name {
                                         "ticker" => {
                                             let ticker : Ticker = serde_json::from_str(&text).unwrap();
-                                            println!("Ticker received {:#?}", ticker);
+                                            // println!("Ticker received {:#?}", ticker);
+                                            
+                                            for td in ticker.data {
+                                                let event : NormalizedQuote = NormalizedQuote {
+                                                    venue: "kraken".to_owned(),
+                                                    instrument: td.symbol,
+                                                    bid_price: td.bid,
+                                                    bid_quantity: td.bid_qty,
+                                                    ask_price: td.ask,
+                                                    ask_quantity: td.ask_qty,
+                                                    exch_timestamp: td.timestamp,
+                                                    gateway_rec_timestamp: rec_timestamp
+                                                };
+                                                let marketevent : MarketEvent = MarketEvent::Quote(event);
+                                                println!("Market event {:#?}", marketevent);
+                                            }
                                         }
                                         "trade" => {
                                             let trade : Trade = serde_json::from_str(&text).unwrap();
@@ -182,15 +197,47 @@ impl KrakenAdapter {
                                         }
                                         "book" => {
                                             let book: Book = serde_json::from_str(&text).unwrap();
-                                            println!("Book received {:#?}", book);
+                                            // println!("Book received {:#?}", book);
+                                            if book.r#type == "snapshot" {
+                                                for bd in book.data {
+                                                    let event : NormalizedBookSnapshot = NormalizedBookSnapshot {
+                                                        venue: "kraken".to_owned(),
+                                                        instrument: bd.symbol,
+                                                        bids: bd.bids.into_iter().map(|level| NormalizedPriceLevel { price: level.price, quantity: level.qty }).collect(),
+                                                        asks: bd.asks.into_iter().map(|level| NormalizedPriceLevel { price: level.price, quantity: level.qty }).collect(),
+                                                        source_checksum: bd.checksum,
+                                                        exch_timestamp: bd.timestamp,
+                                                        gateway_rec_timestamp: rec_timestamp
+                                                    };
+
+                                                    let marketevent : MarketEvent = MarketEvent::BookSnapshot(event);
+                                                    println!("Market event {:#?}", marketevent);
+                                                }
+                                            }
+                                            else if book.r#type == "update" {
+                                                for bd in book.data {
+                                                    let event: NormalizedBookUpdate = NormalizedBookUpdate {
+                                                        venue: "kraken".to_owned(),
+                                                        instrument: bd.symbol,
+                                                        bid_changes: bd.bids.into_iter().map(|level| NormalizedPriceLevel { price: level.price, quantity: level.qty }).collect(),
+                                                        ask_changes: bd.asks.into_iter().map(|level| NormalizedPriceLevel { price: level.price, quantity: level.qty }).collect(),
+                                                        source_checksum: bd.checksum,
+                                                        exch_timestamp: bd.timestamp,
+                                                        gateway_rec_timestamp: rec_timestamp
+                                                    };
+
+                                                    let marketevent : MarketEvent = MarketEvent::BookUpdate(event);
+                                                    println!("Market event {:#?}", marketevent);
+                                                }
+                                            }
                                         }
                                         "instrument" => {
                                             let instrument : Instrument = serde_json::from_str(&text).unwrap();
                                             // we only care about instruments pertaining to our chosen symbol
                                             // go into pairs
                                             let pairs = &instrument.data.pairs;
-                                            println!("Instrument received {:#?}", instrument);
-                                            println!("Here are the pairs {:#?}", pairs);
+                                            // println!("Instrument received {:#?}", instrument);
+                                            // println!("Here are the pairs {:#?}", pairs);
                                             
                                         
                                             let result = pairs.iter().find(|pair| pair.symbol ==self.symbol);

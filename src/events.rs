@@ -8,10 +8,10 @@ use chrono::{DateTime, Utc, Local, TimeZone, NaiveDateTime, Duration};
 
 #[derive(Deserialize, Debug)]
 pub enum MarketEvent {
-    Trade(Trade)
-    // quote: Quote,
-    // booksnapshot: BookSnapshot,
-    // bookupdate: BookUpdate,
+    Trade(Trade),
+    Quote(Quote),
+    BookSnapshot(BookSnapshot),
+    BookUpdate(BookUpdate)
 }
 
 #[derive(Deserialize, Debug)]
@@ -34,6 +34,34 @@ pub struct Quote {
     pub(crate) bid_quantity: Decimal,
     pub(crate) ask_price: Decimal,
     pub(crate) ask_quantity: Decimal,
+    pub(crate) exch_timestamp: DateTime<Utc>,
+    pub(crate) gateway_rec_timestamp: DateTime<Utc>
+}
+
+#[derive(Deserialize, Debug)]
+pub struct PriceLevel {
+    pub(crate) price: Decimal,
+    pub(crate) quantity: Decimal
+}
+
+#[derive(Deserialize, Debug)]
+pub struct BookSnapshot {
+    pub(crate) venue: String,
+    pub(crate) instrument: String,
+    pub(crate) bids: Vec<PriceLevel>,
+    pub(crate) asks: Vec<PriceLevel>,
+    pub(crate) source_checksum: u64,
+    pub(crate) exch_timestamp: DateTime<Utc>,
+    pub(crate) gateway_rec_timestamp: DateTime<Utc>
+}
+
+#[derive(Deserialize, Debug)]
+pub struct BookUpdate {
+    pub(crate) venue: String,
+    pub(crate) instrument: String,
+    pub(crate) bid_changes: Vec<PriceLevel>,
+    pub(crate) ask_changes: Vec<PriceLevel>,
+    pub(crate) source_checksum: u64,
     pub(crate) exch_timestamp: DateTime<Utc>,
     pub(crate) gateway_rec_timestamp: DateTime<Utc>
 }
