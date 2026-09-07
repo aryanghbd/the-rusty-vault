@@ -32,8 +32,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
     
-    while let msg = rx.recv().unwrap() {
-        if let Some(event) = 
+    while let Some(event) = rx.recv().await {
+        println!("Processing: {:#?}", event);
     }
 
     Ok(())
