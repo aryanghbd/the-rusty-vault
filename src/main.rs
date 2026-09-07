@@ -73,6 +73,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         data: Vec<BookData>
     }
 
+    #[derive(Deserialize, Debug)]
+    struct Instrument {
+        channel: String,
+        r#type: String,
+        data: InstrumentData // instrument data contains pairs which has its own shit in there
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct InstrumentData {
+        // ignore assets
+        pairs: Vec<Pair>
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct Pair {
+        symbol: String,
+        base: String,
+        quote: String,
+        status: String,
+        qty_precision: u64,
+        qty_increment: Decimal,
+        price_precision: u64,
+        price_increment: Decimal,
+        qty_min: Decimal,
+        cost_min: Decimal,
+        marginable: bool,
+        has_index: bool
+    }
+
     println!("Hi");
     let url = "wss://ws.kraken.com/v2";
     
@@ -104,10 +133,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         r#"{{ "method": "subscribe", "params": {{ "channel": "book", "symbol": ["{}"] }} }}"#,
         symbol
     );
+    let instrument = format!(
+        r#"{{ "method": "subscribe", "params": {{ "channel": "instrument"}} }}"#,
+    );
     // split websocket stream into a sender and receiver for fun bidirectionality.
     let (mut write, mut read) = ws_stream.split();
 
-    write.send(Message::Text(book_l2.into())).await?;
+    write.send(Message::Text(instrument.into())).await?;
     println!("Subscription request sent!");
 
 
@@ -140,6 +172,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     "book" => {
                                         let book: Book = serde_json::from_str(&text).unwrap();
                                         println!("Book received {:#?}", book);
+                                    }
+                                    "instrument" => {
+                                        let instrument : Instrument = serde_json::from_str(&text).unwrap();
+                                        // we only care about instruments pertaining to our chosen symbol
+                                        // go into pairs
+                                        let pairs = &instrument.data.pairs;
+                                        println!("Instrument received {:#?}", instrument);
+                                        println!("Here are the pairs {:#?}", pairs);
+                                        
+                                    
+                                        let result = pairs.iter().find(|pair| pair.symbol == symbol);
+                                        if let Some(found) = result {
+                                            println!("Relevant is here {:#?}", found);
+                                        }
                                     }
                                     _ => {
                                         println!("Not implemented yet");
