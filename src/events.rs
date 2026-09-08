@@ -6,6 +6,7 @@ use std::io;
 use rust_decimal::Decimal;
 use chrono::{DateTime, Utc, Local, TimeZone, NaiveDateTime, Duration};
 
+// generalized market events that must be normalized from each provider into this format
 #[derive(Deserialize, Debug)]
 pub enum MarketEvent {
     Trade(Trade),
