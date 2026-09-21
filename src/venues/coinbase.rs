@@ -90,7 +90,42 @@ impl CoinbaseAdapter {
         return Self { symbol };
     }
 
-    // pub async fn run(&self, tx : mpsc::Sender<MarketEvent>) -> Result<(), Box<dyn std::error::Error>> {
-    //     let (mut ws_stream, _response) = connect_async(Self::WS_URL).await?;
-    // }
+    pub async fn run(&self, tx : mpsc::Sender<MarketEvent>) -> Result<(), Box<dyn std::error::Error>> {
+        let (mut ws_stream, _response) = connect_async(Self::WS_URL).await?;
+
+        let ticker = format!(
+            r#"{{ "type": "subscribe", "channel": "ticker", "product_ids": ["{}"] }}"#,
+            self.symbol
+        );
+
+        let trade = format!(
+            r#"{{ "type": "subscribe", "channel": "market_trades", "product_ids": ["{}"] }}"#,
+            self.symbol
+        );
+
+        let book_l2 = format!(
+            r#"{{ "type": "subscribe", "channel": "level2", "product_ids": ["{}"] }}"#,
+            self.symbol
+        );
+
+        // let heartbeats: String "{{ "type": "subscribe", "channel": "heartbeats" }}";
+
+        let (mut write, mut read) = ws_stream.split();
+        write.send(Message::Text(ticker.into())).await?;
+        write.send(Message::Text(trade.into())).await?;
+        write.send(Message::Text(book_l2.into())).await?;
+
+        loop {
+            tokio::select! {
+                Some(result) = read.next() => {
+                    match result {
+                        Ok(Message::Text(text)) => {
+                            
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
