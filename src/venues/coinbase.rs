@@ -33,8 +33,8 @@ struct Ticker {
 }
 
 #[derive(Deserialize, Debug)]
-struct L2Update {
-    side: String,
+struct L2Update { 
+    side: String, // bid or offer.
     event_time: DateTime<Utc>,
     price_level: rust_decimal::Decimal,
     new_quantity: rust_decimal::Decimal
@@ -42,7 +42,7 @@ struct L2Update {
 
 #[derive(Deserialize, Debug)]
 struct L2Event {
-    r#type: String,
+    r#type: String, // can be either snapshot or update
     product_id: String,
     updates: Vec<L2Update>
 }
@@ -120,7 +120,71 @@ impl CoinbaseAdapter {
                 Some(result) = read.next() => {
                     match result {
                         Ok(Message::Text(text)) => {
-                            
+                            let rec_timestamp = Utc::now();
+                            let msg: serde_json::Value = serde_json::from_str(&text),unwrap();
+
+                            if let Some(channel) = msg.get("channel") {
+                                if let Some(channel_name) = channel.as_str() {
+                                    match channel_name {
+                                        "ticker" => {
+                                            let ticker: Ticker = serde_json::from_str(&text).unwrap();
+
+                                            // now we need to convert to normalized again
+
+                                            for event in ticker.events {
+                                                for tic in event.tickers {
+                                                    let norm_event : NormalizedQuote = NormalizedQuote {
+                                                        venue: "coinbase".to_owned(),
+                                                        instrument: norm_event.product_id,
+                                                        bid_price: norm_event.best_bid,
+                                                        bid_quantity: norm_event.best_bid_quantity.
+                                                        ask_price: norm_event.best_ask,
+                                                        ask_quantity: norm_event.best_ask_quantity,
+                                                        exch_timestamp: ticker.timestamp,
+                                                        gateway_rec_timestamp: rec_timestamp
+                                                    };
+
+                                                    let marketevent : MarketEvent = MarketEvent::Quote(norm_event);
+                                                    println!("Market event {:#?}", marketevent);
+                                                    tx.send(marketevent).await?;
+                                                }
+                                            }
+    
+                                        }
+
+                                        "market_trades" => {
+                                            let market_trade : MarketTrade = serde_json::from_str(&text).unwrap();
+
+                                            for event in market_trade.events {
+                                                for trade in event.trades {
+                                                    let norm_event : NormalizedTrade = NormalizedTrade {
+                                                        venue: "coinbase".to_owned(),
+                                                        instrument: norm_event.product_id,
+                                                        trade_id: norm_event.trade_id,
+                                                        side: norm_event.side,
+                                                        price: norm_event.price,
+                                                        quantity: norm_event.size,
+                                                        exch_timestamp: norm_event.time, //since multiple trades can be bundled in one message we have to be more specific
+                                                        gateway_rec_timestamp: rec_timestamp
+                                                    };
+
+                                                    let marketevent : MarketEvent = MarketEvent::Trade(event);
+                                                    println!("Market Event {:#?}", marketevent);
+                                                    tx.send(marketevent).await?;
+                                                }
+                                            }
+                                        }
+
+                                        "level2" => {
+                                            let l2m : L2Message = serde_json::from_str(&text).unwrap();
+
+                                            for event in l2m.events {
+
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
