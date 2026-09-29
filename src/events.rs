@@ -51,7 +51,7 @@ pub struct BookSnapshot {
     pub(crate) instrument: String,
     pub(crate) bids: Vec<PriceLevel>,
     pub(crate) asks: Vec<PriceLevel>,
-    pub(crate) source_checksum: u64,
+    pub(crate) source_checksum: Option<u64>, // this may or may not be present
     pub(crate) exch_timestamp: DateTime<Utc>,
     pub(crate) gateway_rec_timestamp: DateTime<Utc>
 }
@@ -62,7 +62,7 @@ pub struct BookUpdate {
     pub(crate) instrument: String,
     pub(crate) bid_changes: Vec<PriceLevel>,
     pub(crate) ask_changes: Vec<PriceLevel>,
-    pub(crate) source_checksum: u64,
+    pub(crate) source_checksum: Option<u64>,
     pub(crate) exch_timestamp: DateTime<Utc>,
     pub(crate) gateway_rec_timestamp: DateTime<Utc>
 }

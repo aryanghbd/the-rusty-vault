@@ -9,6 +9,8 @@ mod events;
 use venues::kraken::KrakenAdapter;
 use tokio::sync::mpsc;
 
+use crate::venues::coinbase::CoinbaseAdapter;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
@@ -25,9 +27,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let (tx, mut rx) = mpsc::channel(100);
 
+    
     let adapter = KrakenAdapter::new(symbol.to_owned());
+    let coinbase_adapter = CoinbaseAdapter::new(symbol.to_owned());
+
+    let kraken_tx = tx.clone();
+    let coinbase_tx = tx.clone();
     tokio::spawn(async move {
-        if let Err(error) = adapter.run(tx).await {
+        if let Err(error) = adapter.run(kraken_tx).await {
+            println!("{}", error);
+        }
+    });
+
+    tokio::spawn(async move {
+        if let Err(error) = coinbase_adapter.run(coinbase_tx).await {
             println!("{}", error);
         }
     });

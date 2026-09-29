@@ -112,7 +112,7 @@ impl KrakenAdapter {
 
 
     pub fn new(symbol : String) -> Self {
-        return Self { symbol };
+        return Self { symbol: symbol.replace("-", "/") };
     }
 
     pub async fn run(&self, tx : mpsc::Sender<MarketEvent>) -> Result<(), Box<dyn std::error::Error>> {
@@ -208,7 +208,7 @@ impl KrakenAdapter {
                                                         instrument: bd.symbol,
                                                         bids: bd.bids.into_iter().map(|level| NormalizedPriceLevel { price: level.price, quantity: level.qty }).collect(),
                                                         asks: bd.asks.into_iter().map(|level| NormalizedPriceLevel { price: level.price, quantity: level.qty }).collect(),
-                                                        source_checksum: bd.checksum,
+                                                        source_checksum: Some(bd.checksum),
                                                         exch_timestamp: bd.timestamp,
                                                         gateway_rec_timestamp: rec_timestamp
                                                     };
@@ -225,7 +225,7 @@ impl KrakenAdapter {
                                                         instrument: bd.symbol,
                                                         bid_changes: bd.bids.into_iter().map(|level| NormalizedPriceLevel { price: level.price, quantity: level.qty }).collect(),
                                                         ask_changes: bd.asks.into_iter().map(|level| NormalizedPriceLevel { price: level.price, quantity: level.qty }).collect(),
-                                                        source_checksum: bd.checksum,
+                                                        source_checksum: Some(bd.checksum),
                                                         exch_timestamp: bd.timestamp,
                                                         gateway_rec_timestamp: rec_timestamp
                                                     };
