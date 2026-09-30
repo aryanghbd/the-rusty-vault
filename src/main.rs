@@ -10,6 +10,7 @@ use venues::kraken::KrakenAdapter;
 use tokio::sync::mpsc;
 
 use crate::venues::coinbase::CoinbaseAdapter;
+use crate::venues::binance::BinanceAdapter;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -30,9 +31,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let adapter = KrakenAdapter::new(symbol.to_owned());
     let coinbase_adapter = CoinbaseAdapter::new(symbol.to_owned());
-
+    let binance_adapter: BinanceAdapter = BinanceAdapter::new(symbol.to_owned());
     let kraken_tx = tx.clone();
     let coinbase_tx = tx.clone();
+    let binance_tx = tx.clone();
+
+    tokio::spawn(async move {
+        if let Err(error) = binance_adapter.run(binance_tx).await {
+            println!("{}", error);
+        }
+    });
+    // need to give each of these their own tx to use otherwise borrowing issues arise.
     tokio::spawn(async move {
         if let Err(error) = adapter.run(kraken_tx).await {
             println!("{}", error);
@@ -45,8 +54,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
     
-    while let Some(event) = rx.recv().await {
-        println!("Processing: {:#?}", event);
+
+    loop {
+        tokio::select! {
+            Some(event) = rx.recv() => {
+                println!("Processing: {:#?}", event);
+            }
+            _ = signal::ctrl_c() => {
+                println!("Shutting down gateway");
+                break;
+            }
+        }
     }
 
     Ok(())

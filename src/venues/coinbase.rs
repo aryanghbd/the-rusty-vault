@@ -87,7 +87,7 @@ impl CoinbaseAdapter {
     const WS_URL: &str = "wss://advanced-trade-ws.coinbase.com";
 
     pub fn new(symbol: String) -> Self {
-        return Self { symbol };
+        return Self { symbol: symbol.replace("/", "-")};
     }
 
     pub async fn run(&self, tx : mpsc::Sender<MarketEvent>) -> Result<(), Box<dyn std::error::Error>> {
