@@ -288,7 +288,7 @@ impl CoinbaseAdapter {
                 },
 
             end = signal::ctrl_c() => {
-                    println!("Funky close");
+                    println!("Received shutdown signal, closing Coinbase connection");
                     break Ok(())
             },
         }

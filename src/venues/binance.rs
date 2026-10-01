@@ -167,7 +167,7 @@ impl BinanceAdapter {
                     }
                 }
                 end = signal::ctrl_c() => {
-                    println!("Funky close");
+                    println!("Received shutdown signal, closing Binance connection");
                     break;
                 }
                     

@@ -267,7 +267,7 @@ impl KrakenAdapter {
                 },
 
                 end = signal::ctrl_c() => {
-                    println!("Funky close");
+                    println!("Received shutdown signal, closing Kraken connection");
                     break Ok(())
                 },
             }

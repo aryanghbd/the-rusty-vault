@@ -16,13 +16,7 @@ use crate::venues::binance::BinanceAdapter;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
 
-    println!("Choose a symbol");
-    // take the string
-    let mut user_input = String::new();
-
-    io::stdin()
-        .read_line(&mut user_input)
-        .expect("Failed to read symbol");
+    let mut user_input = std::env::args().nth(1).expect("Usage: cargo run -- <SYMBOL");
 
     let symbol = user_input.trim();
     
